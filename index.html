@@ -64,6 +64,7 @@ function solve () {
 			}
 			numbers.push(num);
 		}
+		numbers.sort(function (lhs,rhs) { return lhs - rhs; });
 	
 		output.innerHTML = "";
 		time.innerHTML = "";
