@@ -170,49 +170,47 @@ function isNormalizedDiv (left,right) {
 
 function make (a,b,cb) {
 	if (isNormalizedAdd(a,b)) {
-		if (!cb(new Add().init(a,b))) return false;
+		cb(new Add().init(a,b));
 	}
 	else if (isNormalizedAdd(b,a)) {
-		if (!cb(new Add().init(b,a))) return false;
+		cb(new Add().init(b,a));
 	}
 
 	if (a.value !== 1 && b.value !== 1) {
 		if (isNormalizedMul(a,b)) {
-			if (!cb(new Mul().init(a,b))) return false;
+			cb(new Mul().init(a,b));
 		}
 		else if (isNormalizedMul(b,a)) {
-			if (!cb(new Mul().init(b,a))) return false;
+			cb(new Mul().init(b,a));
 		}
 	}
 
 	if (a.value > b.value) {
 		if (isNormalizedSub(a,b)) {
-			if (!cb(new Sub().init(a,b))) return false;
+			cb(new Sub().init(a,b));
 		}
 
 		if (b.value !== 1 && a.value % b.value === 0 && isNormalizedDiv(a,b)) {
-			if (!cb(new Div().init(a,b))) return false;
+			cb(new Div().init(a,b));
 		}
 	}
 	else if (b.value > a.value) {
 		if (isNormalizedSub(b,a)) {
-			if (!cb(new Sub().init(b,a))) return false;
+			cb(new Sub().init(b,a));
 		}
 
 		if (a.value !== 1 && b.value % a.value === 0 && isNormalizedDiv(b,a)) {
-			if (!cb(new Div().init(b,a))) return false;
+			cb(new Div().init(b,a));
 		}
 	}
 	else if (b.value !== 1) {
 		if (isNormalizedDiv(a,b)) {
-			if (!cb(new Div().init(a,b))) return false;
+			cb(new Div().init(a,b));
 		}
 		else if (isNormalizedDiv(b,a)) {
-			if (!cb(new Div().init(b,a))) return false;
+			cb(new Div().init(b,a));
 		}
 	}
-
-	return true;
 }
 
 function solutions (target,numbers,cb) {
@@ -243,7 +241,8 @@ function solutions (target,numbers,cb) {
 
 				if (!(aexpr.used & bexpr.used)) {
 					var hasroom = (aexpr.used | bexpr.used) !== full_usage;
-					if (!make(aexpr,bexpr,function (expr) {
+					
+					make(aexpr,bexpr,function (expr) {
 						var issolution = expr.value === target;
 						if (hasroom && !issolution) {
 							exprs.push(expr);
@@ -251,13 +250,10 @@ function solutions (target,numbers,cb) {
 						if (issolution) {
 							if (uniq_solutions[expr.id] !== true) {
 								uniq_solutions[expr.id] = true;
-								return cb(expr);
+								cb(expr);
 							}
 						}
-						return true;
-					})) {
-						return false;
-					}
+					});
 				}
 			}
 		}
@@ -265,8 +261,6 @@ function solutions (target,numbers,cb) {
 		lower = upper;
 		upper = exprs.length;
 	}
-
-	return true;
 }
 
 function main (args) {
@@ -303,7 +297,6 @@ function main (args) {
 	solutions(target, numbers, function (expr) {
 		console.log(i+": "+expr.toString());
 		++ i;
-		return true;
 	});
 }
 

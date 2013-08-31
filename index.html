@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Countdown Numbers Game Solver</title>
+<style type="text/css">
+#input input {
+	width: 4em;
+}
+#input ul,
+#input li {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+#input li {
+	display: inline;
+	margin-right: 1em;
+}
+#output li {
+	font-family: monospace;
+}
+input[type=number] {
+	text-align: right;
+}
+</style>
+
+<script type="text/javascript">
+// <![CDATA[
+
+var worker = null;
+var startTime = NaN;
+
+function solve () {
+	var solveBtn = document.getElementById("solve-btn");
+	var cancelBtn = document.getElementById("cancel-btn");
+	var output = document.getElementById("output");
+	var time = document.getElementById("time");
+
+	if (worker) {
+		worker.terminate();
+		worker = null;
+	}
+
+	try {
+		var target = parseInt(document.getElementById("target").value,10);
+		var numbers = [];
+	
+		if (isNaN(target)) {
+			throw new TypeError("target is not a number");
+		}
+
+		if (target < 0) {
+			throw new TypeError("target musst not be negative");
+		}
+
+		for (var i = 1; i <= 6; ++ i) {
+			var str = document.getElementById("number"+i).value;
+			var num = parseInt(str,10);
+			if (isNaN(num)) {
+				throw new TypeError("argument is not a number: "+str);
+			}
+			if (num <= 0) {
+				throw new TypeError("illegal argument value: "+str);
+			}
+			numbers.push(num);
+		}
+	
+		output.innerHTML = "";
+		time.innerHTML = "";
+		solveBtn.disabled = true;
+		cancelBtn.disabled = false;
+
+		worker = new Worker("worker.js");
+
+		worker.addEventListener('message', function (event) {
+			var expr = event.data;
+			if (expr) {
+				var li = document.createElement('li');
+				li.appendChild(document.createTextNode(expr.toString()));
+				output.appendChild(li);
+			}
+			else {
+				solveBtn.disabled = false;
+				cancelBtn.disabled = true;
+		
+				var endTime = Date.now();
+				time.appendChild(document.createTextNode("finished in "+((endTime - startTime) / 1000) + " seconds"));
+			}
+		}, false);
+
+		startTime = Date.now();
+		worker.postMessage({target: target, numbers: numbers});
+	}
+	catch (e) {
+		console.error(e);
+
+		solveBtn.disabled = false;
+		cancelBtn.disabled = true;
+
+		if (worker) {
+			worker.terminate();
+			worker = null;
+		}
+
+		alert(String(e));
+	}
+}
+
+function cancelSolve () {
+	var solveBtn = document.getElementById("solve-btn");
+	var cancelBtn = document.getElementById("cancel-btn");
+	var time = document.getElementById("time");
+	solveBtn.disabled = false;
+	cancelBtn.disabled = true;
+
+	if (worker) {
+		worker.terminate();
+		worker = null;
+	}
+	
+	var endTime = Date.now();
+	time.innerHTML = '';
+	time.appendChild(document.createTextNode("canceled after "+((endTime - startTime) / 1000) + " seconds"));
+}
+
+// ]]>
+</script>
+</head>
+<body>
+<h1>Countdown Numbers Game Solver <sup>[<a href="https://github.com/panzi/numbers-js">fork on GitHub</a>]</sup></h1>
+
+<form id="input" action="javascript:void(0)" onsubmit="setTimeout(solve,0);return false;">
+<label>Target: <input type="number" min="0" id="target" value="396"/></label>
+<div>Numbers:</div>
+<ul>
+	<li><input type="number" min="1" id="number1" value="3"
+	/></li><li><input type="number" min="1" id="number2" value="3"
+	/></li><li><input type="number" min="1" id="number3" value="6"
+	/></li><li><input type="number" min="1" id="number4" value="8"
+	/></li><li><input type="number" min="1" id="number5" value="50"
+	/></li><li><input type="number" min="1" id="number6" value="75"
+	/></li>
+</ul>
+<button type="submit" id="solve-btn">Solve</button>
+<button type="button" id="cancel-btn" disabled onclick="cancelSolve();">Cancel</button>
+</form>
+
+<ol id="output"></ol>
+
+<div id="time"></div>
+</body>
+</html>
