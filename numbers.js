@@ -287,10 +287,10 @@ function main (args) {
 	if (numbers.length > 32) {
 		throw new TypeError("only up to 32 numbers supported");
 	}
-	numbers.sort();
+	numbers.sort(function (lhs,rhs) { return lhs - rhs; });
 
 	console.log("target  = "+target);
-	console.log("numbers = "+JSON.stringify(numbers));
+	console.log("numbers = ["+numbers.join(', ')+"]");
 	
 	console.log("solutions:");
 	var i = 1;
@@ -305,4 +305,7 @@ if (typeof(require) !== 'undefined' &&
 	typeof(process) !== 'undefined' &&
 	require.main === module) {
 	main(process.argv.slice(1));
+}
+else if (typeof(exports) !== 'undefined') {
+	exports.numbers = numbers;
 }
