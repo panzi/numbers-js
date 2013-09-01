@@ -1,3 +1,5 @@
+"use strict";
+
 importScripts('numbers.js');
 
 self.addEventListener('message', function (event) {
