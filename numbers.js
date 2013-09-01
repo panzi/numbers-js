@@ -12,15 +12,16 @@ Expr.prototype = {
 };
 
 
-function BinExpr () {}
+function BinExpr (op) {
+	this.op = op;
+}
 
 BinExpr.prototype = new Expr();
 
-BinExpr.prototype.initBinExpr = function (left,right,value,op) {
+BinExpr.prototype.initBinExpr = function (left,right,value) {
 	this.left  = left;
 	this.right = right;
 	this.value = value;
-	this.op    = op;
 	this.used  = left.used | right.used;
 	this.id    = this.toId();
 	return this;
@@ -38,45 +39,45 @@ BinExpr.prototype.toId = function () {
 
 function Add () {}
 
-Add.prototype = new BinExpr();
+Add.prototype = new BinExpr('+');
 
 Add.prototype.precedence = 0;
 
 Add.prototype.init = function (left,right) {
-	return this.initBinExpr(left,right,left.value + right.value,'+');
+	return this.initBinExpr(left,right,left.value + right.value);
 };
 
 
 function Sub () {}
 
-Sub.prototype = new BinExpr();
+Sub.prototype = new BinExpr('-');
 
 Sub.prototype.precedence = 1;
 
 Sub.prototype.init = function (left,right) {
-	return this.initBinExpr(left,right,left.value - right.value,'-');
+	return this.initBinExpr(left,right,left.value - right.value);
 };
 
 
 function Mul () {}
 
-Mul.prototype = new BinExpr();
+Mul.prototype = new BinExpr('*');
 
 Mul.prototype.precedence = 3;
 
 Mul.prototype.init = function (left,right) {
-	return this.initBinExpr(left,right,left.value * right.value,'*');
+	return this.initBinExpr(left,right,left.value * right.value);
 };
 
 
 function Div () {}
 
-Div.prototype = new BinExpr();
+Div.prototype = new BinExpr('/');
 
 Div.prototype.precedence = 2;
 
 Div.prototype.init = function (left,right) {
-	return this.initBinExpr(left,right,left.value / right.value,'/');
+	return this.initBinExpr(left,right,left.value / right.value);
 };
 
 
@@ -84,12 +85,12 @@ function Val () {}
 
 Val.prototype = new Expr();
 
+Val.prototype.op = '$';
 Val.prototype.precedence = 4;
 
 Val.prototype.init = function (value,index) {
 	this.value = value;
 	this.index = index;
-	this.op    = '$';
 	this.used  = 1 << index;
 	this.id    = this.toId();
 	return this;
