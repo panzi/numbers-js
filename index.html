@@ -3,7 +3,7 @@
 <head>
 <title>Countdown Numbers Game Solver</title>
 <style type="text/css">
-#input input {
+#input input[type=number] {
 	width: 4em;
 }
 #input ul,
@@ -24,6 +24,7 @@ input[type=number] {
 }
 </style>
 
+<script type="text/javascript" src="numbers.js"></script>
 <script type="text/javascript">
 // <![CDATA[
 "use strict";
@@ -36,6 +37,7 @@ function solve () {
 	var cancelBtn = document.getElementById("cancel-btn");
 	var output = document.getElementById("output");
 	var time = document.getElementById("time");
+	var useWorker = document.getElementById("use-worker").checked;
 
 	if (worker) {
 		worker.terminate();
@@ -72,26 +74,27 @@ function solve () {
 		solveBtn.disabled = true;
 		cancelBtn.disabled = false;
 
-		worker = new Worker("worker.js");
+		if (useWorker) {
+			worker = new Worker("worker.js");
 
-		worker.addEventListener('message', function (event) {
-			var expr = event.data;
-			if (expr) {
-				var li = document.createElement('li');
-				li.appendChild(document.createTextNode(expr.toString()));
-				output.appendChild(li);
-			}
-			else {
-				solveBtn.disabled = false;
-				cancelBtn.disabled = true;
-		
-				var endTime = Date.now();
-				time.appendChild(document.createTextNode("finished in "+((endTime - startTime) / 1000) + " seconds"));
-			}
-		}, false);
+			worker.addEventListener('message', function (event) {
+				var expr = event.data;
+				if (expr) {
+					addExpr(expr);
+				}
+				else {
+					done();
+				}
+			}, false);
 
-		startTime = Date.now();
-		worker.postMessage({target: target, numbers: numbers});
+			startTime = Date.now();
+			worker.postMessage({target: target, numbers: numbers});
+		}
+		else {
+			startTime = Date.now();
+			solutions(target, numbers, addExpr);
+			done();
+		}
 	}
 	catch (e) {
 		console.error(e);
@@ -105,6 +108,20 @@ function solve () {
 		}
 
 		alert(String(e));
+	}
+
+	function addExpr (expr) {
+		var li = document.createElement('li');
+		li.appendChild(document.createTextNode(expr.toString()));
+		output.appendChild(li);
+	}
+
+	function done () {
+		solveBtn.disabled = false;
+		cancelBtn.disabled = true;
+		
+		var endTime = Date.now();
+		time.appendChild(document.createTextNode("finished in "+((endTime - startTime) / 1000) + " seconds"));
 	}
 }
 
@@ -145,6 +162,7 @@ function cancelSolve () {
 </ul>
 <button type="submit" id="solve-btn">Solve</button>
 <button type="button" id="cancel-btn" disabled onclick="cancelSolve();">Cancel</button>
+<label title="Without this the script will freeze the browser until it's finished (cancel won't work either)."><input type="checkbox" id="use-worker" checked/> Use Worker</label>
 </form>
 
 <ol id="output"></ol>

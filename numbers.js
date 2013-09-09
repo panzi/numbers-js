@@ -226,7 +226,7 @@ function solutions (target,numbers,cb) {
 	for (var i = 0; i < exprs.length; ++ i) {
 		var expr = exprs[i];
 		if (expr.value === target) {
-			if (!cb(expr)) return false;
+			cb(expr);
 			break;
 		}
 	}
