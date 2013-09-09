@@ -246,15 +246,14 @@ function solutions (target,numbers,cb) {
 					var hasroom = (aexpr.used | bexpr.used) !== full_usage;
 					
 					make(aexpr,bexpr,function (expr) {
-						var issolution = expr.value === target;
-						if (hasroom && !issolution) {
-							exprs.push(expr);
-						}
-						if (issolution) {
+						if (expr.value === target) {
 							if (uniq_solutions[expr.id] !== true) {
 								uniq_solutions[expr.id] = true;
 								cb(expr);
 							}
+						}
+						else if (hasroom) {
+							exprs.push(expr);
 						}
 					});
 				}
