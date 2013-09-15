@@ -40,7 +40,12 @@ function solve () {
 	var useWorker = document.getElementById("use-worker").checked;
 
 	if (worker) {
-		worker.terminate();
+		try  {
+			worker.terminate();
+		}
+		catch (e) {
+			if (typeof console !== "undefined") console.error(e);
+		}
 		worker = null;
 	}
 
@@ -83,6 +88,7 @@ function solve () {
 					addExpr(expr);
 				}
 				else {
+					worker = null;
 					done();
 				}
 			}, false);
@@ -97,13 +103,18 @@ function solve () {
 		}
 	}
 	catch (e) {
-		console.error(e);
+		if (typeof console !== "undefined") console.error(e);
 
 		solveBtn.disabled = false;
 		cancelBtn.disabled = true;
 
 		if (worker) {
-			worker.terminate();
+			try {
+				worker.terminate();
+			}
+			catch (e2) {
+				if (typeof console !== "undefined") console.error(e2);
+			}
 			worker = null;
 		}
 
@@ -133,7 +144,12 @@ function cancelSolve () {
 	cancelBtn.disabled = true;
 
 	if (worker) {
-		worker.terminate();
+		try {
+			worker.terminate();
+		}
+		catch (e) {
+			if (typeof console !== "undefined") console.error(e);
+		}
 		worker = null;
 	}
 	
