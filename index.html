@@ -72,6 +72,7 @@ function solve () {
 			}
 			numbers.push(num);
 		}
+		var unsortedNumbers = numbers.slice(0);
 		numbers.sort(function (lhs,rhs) { return lhs - rhs; });
 	
 		output.innerHTML = "";
@@ -100,6 +101,13 @@ function solve () {
 			startTime = Date.now();
 			solutions(target, numbers, addExpr);
 			done();
+		}
+
+		if (history.pushState) {
+			var search = '?target='+target+'&numbers='+unsortedNumbers.join(',');
+			if (search !== location.search) {
+				history.pushState(null, null, search);
+			}
 		}
 	}
 	catch (e) {
@@ -158,10 +166,44 @@ function cancelSolve () {
 	time.appendChild(document.createTextNode("canceled after "+((endTime - startTime) / 1000) + " seconds"));
 }
 
+function loadParams() {
+	var search = location.search.replace(/^\?/,'');
+	var params = {};
+
+	if (search) {
+		search = search.split('&');
+		for (var i = 0; i < search.length; ++ i) {
+			var param = search[i].split('=');
+			params[decodeURIComponent(param[0])] = decodeURIComponent(param.slice(1).join('='));
+		}
+	}
+
+	if (params.target || params.numbers) {
+		document.getElementById("target").value = params.target;
+
+		for (var i = 1; i <= 6; ++ i) {
+			document.getElementById("number"+i).value = '';
+		}
+
+		if (params.numbers) {
+			var numbers = params.numbers.split(',');
+			for (var i = 0, n = Math.min(numbers.length, 6); i < n; ++ i) {
+				document.getElementById("number"+(i+1)).value = numbers[i];
+			}
+
+			if (numbers.length >= 6 && params.target && window.Worker) {
+				solve();
+			}
+		}
+	}
+}
+
+window.onpopstate = loadParams;
+
 // ]]>
 </script>
 </head>
-<body>
+<body onload="loadParams();">
 <h1>Countdown Numbers Game Solver <sup>[<a href="https://github.com/panzi/numbers-js">fork on GitHub</a>]</sup></h1>
 
 <form id="input" action="javascript:void(0)" onsubmit="setTimeout(solve,0);return false;">
