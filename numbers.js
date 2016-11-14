@@ -20,12 +20,13 @@ function BinExpr (op) {
 
 BinExpr.prototype = new Expr();
 
-BinExpr.prototype.initBinExpr = function (left,right,value) {
-	this.left  = left;
-	this.right = right;
-	this.value = value;
-	this.used  = left.used | right.used;
-	this.id    = this.toId();
+BinExpr.prototype.initBinExpr = function (left, right, value, generation) {
+	this.left       = left;
+	this.right      = right;
+	this.value      = value;
+	this.used       = left.used | right.used;
+	this.id         = this.toId();
+	this.generation = generation;
 	return this;
 };
 
@@ -45,8 +46,8 @@ Add.prototype = new BinExpr('+');
 
 Add.prototype.precedence = 0;
 
-Add.prototype.init = function (left,right) {
-	return this.initBinExpr(left,right,left.value + right.value);
+Add.prototype.init = function (left, right, generation) {
+	return this.initBinExpr(left, right, left.value + right.value, generation);
 };
 
 
@@ -56,8 +57,8 @@ Sub.prototype = new BinExpr('-');
 
 Sub.prototype.precedence = 1;
 
-Sub.prototype.init = function (left,right) {
-	return this.initBinExpr(left,right,left.value - right.value);
+Sub.prototype.init = function (left, right, generation) {
+	return this.initBinExpr(left, right, left.value - right.value, generation);
 };
 
 
@@ -67,8 +68,8 @@ Mul.prototype = new BinExpr('*');
 
 Mul.prototype.precedence = 3;
 
-Mul.prototype.init = function (left,right) {
-	return this.initBinExpr(left,right,left.value * right.value);
+Mul.prototype.init = function (left, right, generation) {
+	return this.initBinExpr(left, right, left.value * right.value, generation);
 };
 
 
@@ -78,8 +79,8 @@ Div.prototype = new BinExpr('/');
 
 Div.prototype.precedence = 2;
 
-Div.prototype.init = function (left,right) {
-	return this.initBinExpr(left,right,left.value / right.value);
+Div.prototype.init = function (left, right, generation) {
+	return this.initBinExpr(left, right, left.value / right.value, generation);
 };
 
 
@@ -90,11 +91,12 @@ Val.prototype = new Expr();
 Val.prototype.op = '$';
 Val.prototype.precedence = 4;
 
-Val.prototype.init = function (value,index) {
-	this.value = value;
-	this.index = index;
-	this.used  = 1 << index;
-	this.id    = this.toId();
+Val.prototype.init = function (value, index, generation) {
+	this.value      = value;
+	this.index      = index;
+	this.used       = 1 << index;
+	this.id         = this.toId();
+	this.generation = generation;
 	return this;
 };
 
@@ -105,7 +107,7 @@ Val.prototype.toString = function () {
 Val.prototype.toId = Val.prototype.toStringUnder = Val.prototype.toString;
 
 
-function isNormalizedAdd (left,right) {
+function isNormalizedAdd (left, right) {
 	var ro = right.op;
 	if (ro === '+' || ro === '-') {
 		return false;
@@ -123,7 +125,7 @@ function isNormalizedAdd (left,right) {
 	}
 }
 
-function isNormalizedSub (left,right) {
+function isNormalizedSub (left, right) {
 	var ro = right.op;
 	if (ro === '+' || ro === '-') {
 		return false;
@@ -138,7 +140,7 @@ function isNormalizedSub (left,right) {
 	}
 }
 
-function isNormalizedMul (left,right) {
+function isNormalizedMul (left, right) {
 	var ro = right.op;
 	if (ro === '*' || ro === '/') {
 		return false;
@@ -156,7 +158,7 @@ function isNormalizedMul (left,right) {
 	}
 }
 
-function isNormalizedDiv (left,right) {
+function isNormalizedDiv (left, right) {
 	var ro = right.op;
 	if (ro === '*' || ro === '/') {
 		return false;
@@ -171,91 +173,146 @@ function isNormalizedDiv (left,right) {
 	}
 }
 
-function make (a,b,cb) {
-	if (isNormalizedAdd(a,b)) {
-		cb(new Add().init(a,b));
+function make (a, b, generation, addExpr) {
+	var avalue = a.value;
+	var bvalue = b.value;
+
+	if (isNormalizedAdd(a, b)) {
+		addExpr(new Add().init(a, b, generation));
 	}
-	else if (isNormalizedAdd(b,a)) {
-		cb(new Add().init(b,a));
+	else if (isNormalizedAdd(b, a)) {
+		addExpr(new Add().init(b, a, generation));
 	}
 
-	if (a.value !== 1 && b.value !== 1) {
-		if (isNormalizedMul(a,b)) {
-			cb(new Mul().init(a,b));
+	if (avalue !== 1 && bvalue !== 1) {
+		if (isNormalizedMul(a, b)) {
+			addExpr(new Mul().init(a, b, generation));
 		}
-		else if (isNormalizedMul(b,a)) {
-			cb(new Mul().init(b,a));
+		else if (isNormalizedMul(b, a)) {
+			addExpr(new Mul().init(b, a, generation));
 		}
 	}
 
-	if (a.value > b.value) {
-		if (isNormalizedSub(a,b)) {
-			cb(new Sub().init(a,b));
+	if (avalue > bvalue) {
+		if (avalue - bvalue !== bvalue && isNormalizedSub(a, b)) {
+			addExpr(new Sub().init(a, b, generation));
 		}
 
-		if (b.value !== 1 && a.value % b.value === 0 && isNormalizedDiv(a,b)) {
-			cb(new Div().init(a,b));
+		if (bvalue !== 1 && avalue % bvalue === 0 && avalue / bvalue !== bvalue && isNormalizedDiv(a, b)) {
+			addExpr(new Div().init(a, b, generation));
 		}
 	}
-	else if (b.value > a.value) {
-		if (isNormalizedSub(b,a)) {
-			cb(new Sub().init(b,a));
+	else if (bvalue > avalue) {
+		if (bvalue - avalue !== avalue && isNormalizedSub(b, a)) {
+			addExpr(new Sub().init(b, a, generation));
 		}
 
-		if (a.value !== 1 && b.value % a.value === 0 && isNormalizedDiv(b,a)) {
-			cb(new Div().init(b,a));
+		if (avalue !== 1 && bvalue % avalue === 0 && bvalue / avalue !== avalue && isNormalizedDiv(b, a)) {
+			addExpr(new Div().init(b, a, generation));
 		}
 	}
-	else if (b.value !== 1) {
-		if (isNormalizedDiv(a,b)) {
-			cb(new Div().init(a,b));
+	else if (bvalue !== 1) {
+		if (isNormalizedDiv(a, b)) {
+			addExpr(new Div().init(a, b, generation));
 		}
-		else if (isNormalizedDiv(b,a)) {
-			cb(new Div().init(b,a));
+		else if (isNormalizedDiv(b, a)) {
+			addExpr(new Div().init(b, a, generation));
 		}
 	}
 }
 
-function solutions (target,numbers,cb) {
+function make_half (a, b, generation, addExpr) {
+	var avalue = a.value;
+	var bvalue = b.value;
+
+	if (isNormalizedAdd(a, b)) {
+		addExpr(new Add().init(a, b, generation));
+	}
+
+	if (avalue !== 1 && bvalue !== 1) {
+		if (isNormalizedMul(a, b)) {
+			addExpr(new Mul().init(a, b, generation));
+		}
+	}
+
+	if (avalue > bvalue) {
+		if (avalue - bvalue !== bvalue && isNormalizedSub(a, b)) {
+			addExpr(new Sub().init(a, b, generation));
+		}
+
+		if (bvalue !== 1 && avalue % bvalue === 0 && avalue / bvalue !== bvalue && isNormalizedDiv(a, b)) {
+			addExpr(new Div().init(a, b, generation));
+		}
+	}
+	else if (avalue === bvalue && bvalue !== 1) {
+		if (isNormalizedDiv(a, b)) {
+			addExpr(new Div().init(a, b, generation));
+		}
+	}
+}
+
+function solutions (target, numbers, cb) {
 	var numcnt = numbers.length;
 	var full_usage = ~(~0 << numcnt);
-	var exprs = numbers.map(function (num,i) {
-		return new Val().init(num,i);
-	});
+	var generation = 0;
+	var segments = new Array(full_usage);
+	for (var i = 0; i < segments.length; ++ i) {
+		segments[i] = [];
+	}
 
-	for (var i = 0; i < exprs.length; ++ i) {
-		var expr = exprs[i];
-		if (expr.value === target) {
-			cb(expr);
-			break;
+	var exprs = [];
+	var has_single_number_solution = false;
+	for (var i = 0; i < numbers.length; ++ i) {
+		var num = numbers[i];
+		var expr = new Val().init(num, i, generation);
+		if (num === target) {
+			if (!has_single_number_solution) {
+				has_single_number_solution = true;
+				cb(expr);
+			}
+		}
+		else {
+			exprs.push(expr);
+			segments[expr.used - 1].push(expr);
 		}
 	}
 
 	var uniq_solutions = {};
 
+	function addExpr (expr) {
+		if (expr.value === target) {
+			if (uniq_solutions[expr.id] !== true) {
+				uniq_solutions[expr.id] = true;
+				cb(expr);
+			}
+		}
+		else if (expr.used !== full_usage) {
+			exprs.push(expr);
+			segments[expr.used - 1].push(expr);
+		}
+	}
+
 	var lower = 0;
 	var upper = numcnt;
 	while (lower < upper) {
+		var prev_generation = generation ++;
 		for (var b = lower; b < upper; ++ b) {
 			var bexpr = exprs[b];
+			var bused = bexpr.used;
 
-			for (var a = 0; a < b; ++ a) {
-				var aexpr = exprs[a];
+			for (var aused = 1; aused <= segments.length; ++ aused) {
+				if ((bused & aused) === 0) {
+					var segment = segments[aused - 1];
+					for (var i = 0; i < segment.length; ++ i) {
+						var aexpr = segment[i];
 
-				if (!(aexpr.used & bexpr.used)) {
-					var hasroom = (aexpr.used | bexpr.used) !== full_usage;
-					
-					make(aexpr,bexpr,function (expr) {
-						if (expr.value === target) {
-							if (uniq_solutions[expr.id] !== true) {
-								uniq_solutions[expr.id] = true;
-								cb(expr);
-							}
+						if (aexpr.generation === prev_generation) {
+							make_half(aexpr, bexpr, generation, addExpr);
 						}
-						else if (hasroom) {
-							exprs.push(expr);
+						else {
+							make(aexpr, bexpr, generation, addExpr);
 						}
-					});
+					}
 				}
 			}
 		}
@@ -269,7 +326,7 @@ function main (args) {
 	if (args.length < 3) {
 		throw new TypeError("not enough arguments");
 	}
-	var target = parseInt(args[1],10);
+	var target = parseInt(args[1], 10);
 	if (isNaN(target)) {
 		throw new TypeError("target is not a number");
 	}
@@ -289,11 +346,11 @@ function main (args) {
 	if (numbers.length > 32) {
 		throw new TypeError("only up to 32 numbers supported");
 	}
-	numbers.sort(function (lhs,rhs) { return lhs - rhs; });
+	numbers.sort(function (lhs, rhs) { return lhs - rhs; });
 
 	console.log("target  = "+target);
 	console.log("numbers = ["+numbers.join(', ')+"]");
-	
+
 	console.log("solutions:");
 	var i = 1;
 	solutions(target, numbers, function (expr) {
